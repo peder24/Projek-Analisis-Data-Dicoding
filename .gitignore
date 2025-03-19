@@ -5,8 +5,8 @@
 Bike-sharing-dataset.zip
 
 # Ignore dataset directory
+/submission/Bike-sharing-dataset/
 /submission/Bike-sharing-dataset
-
 # Ignore specific CSV files
 /submission/clean_bike_sharing_20250319_000030.csv
 /submission/clean_bike_sharing_20250319_000043.csv
