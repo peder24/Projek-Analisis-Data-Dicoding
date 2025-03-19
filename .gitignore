@@ -1,0 +1,22 @@
+# Ignore Jupyter Notebook in submission folder
+/submission/notebook.ipynb
+
+# Ignore zip file
+Bike-sharing-dataset.zip
+
+# Ignore dataset directory
+/submission/Bike-sharing-dataset
+
+# Ignore specific CSV files
+/submission/clean_bike_sharing_20250319_000030.csv
+/submission/clean_bike_sharing_20250319_000043.csv
+
+
+# Virtual environments
+venv/
+env/
+.env
+
+# OS specific files
+.DS_Store
+Thumbs.db
