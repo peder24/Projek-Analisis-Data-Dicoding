@@ -81,7 +81,7 @@ st.markdown("""
 def load_data():
     try:
         # Try to load from a fixed path without using os module
-        data = pd.read_csv('dashboard/main_data.csv')
+        data = pd.read_csv('./submission/dashboard/main_data.csv')
         st.markdown("<div class='success-message'>File berhasil dimuat!</div>", unsafe_allow_html=True)
     except Exception as e:
         # If file not found, show a file uploader
