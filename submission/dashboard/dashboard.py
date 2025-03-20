@@ -6,7 +6,6 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import os
 
 # Import statsmodels dengan penanganan error
 try:
@@ -84,32 +83,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Function to find the CSV file
-def find_csv_file(filename="main_data.csv"):
-    # List of possible paths to check
-    possible_paths = [
-        filename,  # Current directory
-        os.path.join("dashboard", filename),  # dashboard folder
-        os.path.join("..", "dashboard", filename),  # One level up, then dashboard folder
-        os.path.join("..", filename),  # One level up
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)  # Same folder as script
-    ]
-    
-    # Check each path
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-    
-    # If we get here, file not found
-    return None
-
 # Function to load data with improved error handling
 @st.cache_data
 def load_data():
-    # Try to find the CSV file
-    file_path = find_csv_file()
-    
-    if file_path is None:
+    try:
+        # Try to load from a fixed path without using os module
+        data = pd.read_csv('dashboard/main_data.csv')
+        st.markdown("<div class='success-message'>File berhasil dimuat!</div>", unsafe_allow_html=True)
+    except Exception as e:
         # If file not found, show a file uploader
         st.markdown("<div class='error-message'>File 'main_data.csv' tidak ditemukan. Silakan upload file CSV.</div>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Upload main_data.csv", type=["csv"])
@@ -120,10 +101,6 @@ def load_data():
         else:
             st.error("Tidak ada file yang diupload. Dashboard tidak dapat ditampilkan.")
             st.stop()
-    else:
-        # File found, load it
-        data = pd.read_csv(file_path)
-        st.markdown(f"<div class='success-message'>File ditemukan di: {file_path}</div>", unsafe_allow_html=True)
     
     # Process the data
     data['datetime'] = pd.to_datetime(data['datetime'])
@@ -536,13 +513,13 @@ try:
         
         with col1:
             # Temperature vs rentals scatter
-                        fig_temp_scatter = px.scatter(filtered_data, x='temp_actual', y='cnt',
+            fig_temp_scatter = px.scatter(filtered_data, x='temp_actual', y='cnt',
                                        title='Suhu vs Total Penyewaan',
                                        labels={'temp_actual': 'Suhu (°C)', 'cnt': 'Total Penyewaan'},
                                        trendline='ols',
                                        color_discrete_sequence=['#00C9A7'])
             
-        st.plotly_chart(fig_temp_scatter, use_container_width=True)
+            st.plotly_chart(fig_temp_scatter, use_container_width=True)
         
         with col2:
             # Humidity vs rentals scatter
@@ -554,6 +531,7 @@ try:
             
             st.plotly_chart(fig_hum_scatter, use_container_width=True)
         
+        # Feature importance analysis (simulated)
         # Feature importance analysis (simulated)
         feature_imp = pd.DataFrame({
             'Fitur': ['Suhu', 'Jam', 'Hari Kerja', 'Musim', 'Kelembaban', 'Kecepatan Angin', 'Kondisi Cuaca'],
@@ -622,8 +600,6 @@ except Exception as e:
     
     # Display helpful information for debugging
     st.error("Informasi Debug:")
-    st.code(f"Direktori kerja saat ini: {os.getcwd()}")
-    st.code(f"Lokasi skrip: {os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else 'Tidak diketahui'}")
     
     # Offer solution for statsmodels error
     if "statsmodels" in str(e):
@@ -640,29 +616,6 @@ except Exception as e:
                 data = pd.read_csv(uploaded_file)
                 data['datetime'] = pd.to_datetime(data['datetime'])
                 st.success("File berhasil diupload! Silakan refresh halaman untuk melihat dashboard.")
-            except Exception as e:
-                st.error(f"Terjadi kesalahan: {e}")
-                
-                # Display helpful information for debugging
-                st.error("Informasi Debug:")
-                st.code(f"Direktori kerja saat ini: {os.getcwd()}")
-                st.code(f"Lokasi skrip: {os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else 'Tidak diketahui'}")
-                
-                # Offer solution for statsmodels error
-                if "statsmodels" in str(e):
-                    st.error("Package 'statsmodels' tidak ditemukan. Jalankan perintah berikut di Command Prompt atau Terminal:")
-                    st.code("pip install statsmodels")
-                
-                # Offer solution for file not found error
-                if "No such file or directory" in str(e):
-                    st.error("File 'main_data.csv' tidak ditemukan. Pastikan file ada di lokasi yang benar atau upload file secara manual.")
-                    uploaded_file = st.file_uploader("Upload main_data.csv", type=["csv"])
-                    
-                    if uploaded_file is not None:
-                        try:
-                            data = pd.read_csv(uploaded_file)
-                            data['datetime'] = pd.to_datetime(data['datetime'])
-                            st.success("File berhasil diupload! Silakan refresh halaman untuk melihat dashboard.")
-                        except Exception as upload_error:
-                            st.error(f"Error saat memproses file yang diupload: {upload_error}")
-                            st.info("Pastikan file CSV yang diupload memiliki format yang sesuai dengan yang diharapkan.")
+            except Exception as upload_error:
+                st.error(f"Error saat memproses file yang diupload: {upload_error}")
+                st.info("Pastikan file CSV yang diupload memiliki format yang sesuai dengan yang diharapkan.")
