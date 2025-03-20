@@ -7,13 +7,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Import statsmodels dengan penanganan error
-try:
-    import statsmodels.api as sm
-except ImportError:
-    st.error("Package 'statsmodels' tidak ditemukan. Jalankan 'pip install statsmodels' di command prompt/terminal.")
-    st.stop()
-
 # Set page configuration
 st.set_page_config(
     page_title="Analisis Penyewaan Sepeda",
