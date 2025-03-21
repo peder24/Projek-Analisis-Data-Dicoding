@@ -1,613 +1,449 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Set page configuration
-st.set_page_config(
-    page_title="Analisis Penyewaan Sepeda",
-    page_icon="🚲",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Konfigurasi halaman
+st.set_page_config(page_title="Analisis Peminjaman Sepeda", layout="wide")
 
-# Custom CSS for styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-    .section-header {
-        font-size: 1.8rem;
-        color: #3498db;
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-    }
-    .subsection-header {
-        font-size: 1.4rem;
-        color: #34495e;
-        margin-top: 1.5rem;
-        margin-bottom: 0.8rem;
-    }
-    .insight-box {
-        background-color: #f8f9fa;
-        border-left: 5px solid #3498db;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 1rem;
-    }
-    .metric-card {
-        background-color: #f1f8ff;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #2980b9;
-    }
-    .metric-label {
-        font-size: 1rem;
-        color: #7f8c8d;
-    }
-    .error-message {
-        background-color: #ffebee;
-        color: #c62828;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-    .success-message {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Judul aplikasi
+st.title("Analisis Peminjaman Sepeda")
 
-# Function to load data with improved error handling
+# Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    try:
-        # Try to load from a fixed path without using os module
-        data = pd.read_csv('./submission/dashboard/main_data.csv')
-        st.markdown("<div class='success-message'>File berhasil dimuat!</div>", unsafe_allow_html=True)
-    except Exception as e:
-        # If file not found, show a file uploader
-        st.markdown("<div class='error-message'>File 'main_data.csv' tidak ditemukan. Silakan upload file CSV.</div>", unsafe_allow_html=True)
-        uploaded_file = st.file_uploader("Upload main_data.csv", type=["csv"])
-        
-        if uploaded_file is not None:
-            data = pd.read_csv(uploaded_file)
-            st.markdown("<div class='success-message'>File berhasil diupload!</div>", unsafe_allow_html=True)
-        else:
-            st.error("Tidak ada file yang diupload. Dashboard tidak dapat ditampilkan.")
-            st.stop()
+    # Asumsikan data sudah diproses sebelumnya
+    # Untuk keperluan contoh, kita akan membuat fungsi dummy untuk membuat dataframe
     
-    # Process the data
-    data['datetime'] = pd.to_datetime(data['datetime'])
-    return data
-
-# Load data
-try:
-    data = load_data()
+    # Buat data dummy untuk hour_df
+    hour_df = pd.read_csv("./submission/dashboard/hour.csv")  # Ganti dengan path file Anda
     
-    # Main header
-    st.markdown("<h1 class='main-header'>🚲 Dashboard Analisis Data Penyewaan Sepeda</h1>", unsafe_allow_html=True)
+    # Buat data dummy untuk day_df
+    day_df = pd.read_csv("./submission/dashboard/day.csv")  # Ganti dengan path file Anda
     
-    # Create sidebar
-    st.sidebar.image("https://img.freepik.com/free-vector/city-bike-sharing-system-abstract-concept-vector-illustration-urban-transportation-system-public-bicycles-network-cycling-track-bike-rental-service-mobile-application-abstract-metaphor_335657-1753.jpg", width=280)
-    st.sidebar.title("Filter")
+    # Tambahkan label-label kategori
+    hour_df['season_label'] = hour_df['season'].map({1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'})
+    day_df['season_label'] = day_df['season'].map({1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'})
     
-    # Date range filter
-    min_date = data['datetime'].min().date()
-    max_date = data['datetime'].max().date()
+    hour_df['weathersit_label'] = hour_df['weathersit'].map({
+        1: 'Clear', 
+        2: 'Mist/Cloudy', 
+        3: 'Light Rain/Snow', 
+        4: 'Heavy Rain/Snow'
+    })
+    day_df['weathersit_label'] = day_df['weathersit'].map({
+        1: 'Clear', 
+        2: 'Mist/Cloudy', 
+        3: 'Light Rain/Snow', 
+        4: 'Heavy Rain/Snow'
+    })
     
-    date_range = st.sidebar.date_input(
-        "Pilih Rentang Tanggal",
-        [min_date, max_date],
-        min_value=min_date,
-        max_value=max_date
+    hour_df['yr_label'] = hour_df['yr'].map({0: '2011', 1: '2012'})
+    day_df['yr_label'] = day_df['yr'].map({0: '2011', 1: '2012'})
+    
+    hour_df['workingday_label'] = hour_df['workingday'].map({0: 'Weekend/Holiday', 1: 'Working Day'})
+    day_df['workingday_label'] = day_df['workingday'].map({0: 'Weekend/Holiday', 1: 'Working Day'})
+    
+    hour_df['weekday_label'] = hour_df['weekday'].map({
+        0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 
+        4: 'Friday', 5: 'Saturday', 6: 'Sunday'
+    })
+    day_df['weekday_label'] = day_df['weekday'].map({
+        0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 
+        4: 'Friday', 5: 'Saturday', 6: 'Sunday'
+    })
+    
+    # Tambahkan kolom untuk bulan
+    month_names = {
+        1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+        7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'
+    }
+    hour_df['month_name'] = hour_df['mnth'].map(month_names)
+    day_df['month_name'] = day_df['mnth'].map(month_names)
+    
+    # Tambahkan kategori untuk variabel cuaca
+    hour_df['temp_actual'] = hour_df['temp'] * 41  # Normalized to actual temperature
+    hour_df['atemp_actual'] = hour_df['atemp'] * 50  # Normalized to actual temperature
+    hour_df['hum_actual'] = hour_df['hum'] * 100  # Normalized to actual percentage
+    hour_df['windspeed_actual'] = hour_df['windspeed'] * 67  # Normalized to actual wind speed
+    
+    day_df['temp_actual'] = day_df['temp'] * 41
+    day_df['atemp_actual'] = day_df['atemp'] * 50
+    day_df['hum_actual'] = day_df['hum'] * 100
+    day_df['windspeed_actual'] = day_df['windspeed'] * 67
+    
+    # Kategori suhu
+    hour_df['temp_category'] = pd.cut(
+        hour_df['temp_actual'], 
+        bins=[0, 10, 20, 30, 41], 
+        labels=['Cold (0-10°C)', 'Cool (10-20°C)', 'Warm (20-30°C)', 'Hot (30-41°C)']
     )
     
-    if len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered_data = data[(data['datetime'].dt.date >= start_date) & 
-                             (data['datetime'].dt.date <= end_date)]
-    else:
-        filtered_data = data
+    # Kategori kelembaban
+    hour_df['hum_category'] = pd.cut(
+        hour_df['hum_actual'], 
+        bins=[0, 25, 50, 75, 100], 
+        labels=['Very Dry (0-25%)', 'Dry (25-50%)', 'Humid (50-75%)', 'Very Humid (75-100%)']
+    )
     
-    # Season filter
-    season_options = ["Semua"] + sorted(data['season_label'].unique().tolist())
-    selected_season = st.sidebar.selectbox("Pilih Musim", season_options)
+    # Kategori kecepatan angin
+    hour_df['windspeed_category'] = pd.cut(
+        hour_df['windspeed_actual'], 
+        bins=[0, 15, 30, 45, 67], 
+        labels=['Calm (0-15)', 'Light Breeze (15-30)', 'Moderate Wind (30-45)', 'Strong Wind (45+)']
+    )
     
-    if selected_season != "Semua":
-        filtered_data = filtered_data[filtered_data['season_label'] == selected_season]
+    # Indeks kenyamanan
+    hour_df['comfort_index'] = (
+        (1 - abs(hour_df['temp_actual'] - 25) / 35) * 50 +  # Suhu optimal sekitar 25°C
+        (1 - hour_df['hum_actual'] / 100) * 30 +  # Kelembaban rendah lebih nyaman
+        (1 - hour_df['windspeed_actual'] / 67) * 20  # Angin rendah lebih nyaman
+    )
+    hour_df['comfort_index'] = hour_df['comfort_index'].clip(0, 100)
+    hour_df['comfort_category'] = pd.cut(
+        hour_df['comfort_index'], 
+        bins=[0, 25, 50, 75, 100], 
+        labels=['Poor', 'Fair', 'Good', 'Excellent']
+    )
     
-    # Weather filter
-    weather_options = ["Semua"] + sorted(data['weathersit_label'].unique().tolist())
-    selected_weather = st.sidebar.selectbox("Pilih Cuaca", weather_options)
+    return hour_df, day_df
+
+# Muat data
+try:
+    hour_df, day_df = load_data()
     
-    if selected_weather != "Semua":
-        filtered_data = filtered_data[filtered_data['weathersit_label'] == selected_weather]
+    # Sidebar untuk navigasi
+    st.sidebar.title("Navigasi")
+    analysis_type = st.sidebar.radio(
+        "Pilih Jenis Analisis:",
+        ["Pola Temporal", "Pengaruh Cuaca"]
+    )
     
-    # Day type filter
-    day_type_options = ["Semua", "Hari Kerja", "Akhir Pekan/Libur"]
-    selected_day_type = st.sidebar.selectbox("Pilih Jenis Hari", day_type_options)
-    
-    if selected_day_type != "Semua":
-        filtered_data = filtered_data[filtered_data['workingday_label'] == selected_day_type]
-    
-    # Show data sample
-    if st.sidebar.checkbox("Tampilkan Sampel Data Mentah"):
-        st.subheader("Sampel Data Mentah")
-        st.dataframe(filtered_data.head(10))
-    
-    # Main dashboard area
-    col1, col2, col3 = st.columns(3)
-    
-    # Key metrics
-    with col1:
-        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='metric-value'>{filtered_data['cnt'].sum():,}</div>", unsafe_allow_html=True)
-        st.markdown("<div class='metric-label'>Total Penyewaan</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='metric-value'>{filtered_data['casual'].sum():,}</div>", unsafe_allow_html=True)
-        st.markdown("<div class='metric-label'>Pengguna Kasual</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='metric-value'>{filtered_data['registered'].sum():,}</div>", unsafe_allow_html=True)
-        st.markdown("<div class='metric-label'>Pengguna Terdaftar</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    st.markdown("<h2 class='section-header'>Analisis Tren Penyewaan</h2>", unsafe_allow_html=True)
-    
-    # Tabs for different analyses
-    tab1, tab2, tab3, tab4 = st.tabs(["Analisis Temporal", "Dampak Cuaca", "Pola Pengguna", "Analisis Korelasi"])
-    
-    with tab1:
-        st.markdown("<h3 class='subsection-header'>Tren Penyewaan Sepanjang Waktu</h3>", unsafe_allow_html=True)
+    if analysis_type == "Pola Temporal":
+        st.header("Analisis Pola Temporal Peminjaman Sepeda")
         
-        # Daily trend
-        daily_data = filtered_data.groupby(filtered_data['datetime'].dt.date)[['casual', 'registered', 'cnt']].sum().reset_index()
-        daily_data['datetime'] = pd.to_datetime(daily_data['datetime'])
+        # Tampilkan subtab untuk berbagai visualisasi pola temporal
+        temporal_tabs = st.tabs(["Pola Musiman", "Pola Mingguan", "Pola Tahunan"])
         
-        fig_daily = px.line(daily_data, x='datetime', y=['casual', 'registered', 'cnt'],
-                           title='Penyewaan Sepeda Harian',
-                           labels={'value': 'Jumlah Penyewaan', 'datetime': 'Tanggal', 'variable': 'Tipe Pengguna'},
-                           color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-        
-        fig_daily.update_layout(legend_title_text='Tipe Pengguna', 
-                              hovermode="x unified",
-                              height=500)
-        
-        st.plotly_chart(fig_daily, use_container_width=True)
-        
-        # Hourly pattern
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            hourly_data = filtered_data.groupby('hour_of_day')[['casual', 'registered', 'cnt']].mean().reset_index()
+        with temporal_tabs[0]:  # Pola Musiman
+            st.subheader("Pola Peminjaman Berdasarkan Musim dan Waktu")
             
-            fig_hourly = px.line(hourly_data, x='hour_of_day', y=['casual', 'registered', 'cnt'],
-                               title='Rata-rata Penyewaan Sepeda Per Jam',
-                               labels={'value': 'Rata-rata Penyewaan', 'hour_of_day': 'Jam', 'variable': 'Tipe Pengguna'},
-                               color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
+            # Persiapkan data untuk visualisasi
+            seasonal_hourly_pattern = hour_df.groupby(['season_label', 'hr']).agg({
+                'cnt': 'mean',
+                'casual': 'mean',
+                'registered': 'mean'
+            }).reset_index()
             
-            fig_hourly.update_layout(legend_title_text='Tipe Pengguna', 
-                                  xaxis=dict(tickmode='linear', dtick=1),
-                                  hovermode="x unified")
+            seasonal_hourly_pivot = seasonal_hourly_pattern.pivot(index='hr', columns='season_label', values='cnt')
             
-            st.plotly_chart(fig_hourly, use_container_width=True)
-        
-        with col2:
-            # Weekly pattern
-            weekday_data = filtered_data.groupby('weekday_label')[['casual', 'registered', 'cnt']].mean().reset_index()
-            weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            weekday_data['weekday_label'] = pd.Categorical(weekday_data['weekday_label'], categories=weekday_order, ordered=True)
-            weekday_data = weekday_data.sort_values('weekday_label')
+            # Plot 1: Pola peminjaman per jam berdasarkan musim
+            fig, ax = plt.subplots(figsize=(10, 6))
+            seasonal_hourly_pivot.plot(ax=ax)
+            plt.title('Pola Peminjaman Sepeda per Jam Berdasarkan Musim', fontsize=12)
+            plt.xlabel('Jam', fontsize=10)
+            plt.ylabel('Rata-rata Jumlah Peminjaman', fontsize=10)
+            plt.xticks(range(0, 24))
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            st.pyplot(fig)
             
-            # Terjemahkan nama hari
-            weekday_mapping = {
-                'Monday': 'Senin',
-                'Tuesday': 'Selasa',
-                'Wednesday': 'Rabu',
-                'Thursday': 'Kamis',
-                'Friday': 'Jumat',
-                'Saturday': 'Sabtu',
-                'Sunday': 'Minggu'
-            }
-            weekday_data['weekday_label'] = weekday_data['weekday_label'].map(weekday_mapping)
-            
-            fig_weekday = px.bar(weekday_data, x='weekday_label', y=['casual', 'registered', 'cnt'],
-                                title='Rata-rata Penyewaan Sepeda Berdasarkan Hari',
-                                labels={'value': 'Rata-rata Penyewaan', 'weekday_label': 'Hari', 'variable': 'Tipe Pengguna'},
-                                barmode='group',
-                                color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-            
-            fig_weekday.update_layout(legend_title_text='Tipe Pengguna')
-            
-            st.plotly_chart(fig_weekday, use_container_width=True)
-        
-        # Monthly pattern
-        monthly_data = filtered_data.groupby('month_name')[['casual', 'registered', 'cnt']].mean().reset_index()
-        month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December']
-        monthly_data['month_name'] = pd.Categorical(monthly_data['month_name'], categories=month_order, ordered=True)
-        monthly_data = monthly_data.sort_values('month_name')
-        
-        # Terjemahkan nama bulan
-        month_mapping = {
-            'January': 'Januari',
-            'February': 'Februari',
-            'March': 'Maret',
-            'April': 'April',
-            'May': 'Mei',
-            'June': 'Juni',
-            'July': 'Juli',
-            'August': 'Agustus',
-            'September': 'September',
-            'October': 'Oktober',
-            'November': 'November',
-            'December': 'Desember'
-        }
-        monthly_data['month_name'] = monthly_data['month_name'].map(month_mapping)
-        
-        fig_monthly = px.line(monthly_data, x='month_name', y=['casual', 'registered', 'cnt'],
-                            title='Rata-rata Penyewaan Sepeda Bulanan',
-                            labels={'value': 'Rata-rata Penyewaan', 'month_name': 'Bulan', 'variable': 'Tipe Pengguna'},
-                            markers=True,
-                            color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-        
-        fig_monthly.update_layout(legend_title_text='Tipe Pengguna')
-        
-        st.plotly_chart(fig_monthly, use_container_width=True)
-        
-        st.markdown("<div class='insight-box'>", unsafe_allow_html=True)
-        st.markdown("""
-        **Wawasan Utama - Pola Temporal:**
-        - Pola jam menunjukkan puncak selama jam kerja untuk pengguna terdaftar, sementara pengguna kasual mencapai puncak pada siang hari dan akhir pekan.
-        - Pola penggunaan akhir pekan berbeda secara signifikan dari hari kerja, dengan pengguna kasual menunjukkan aktivitas lebih tinggi.
-        - Tren musiman menunjukkan penggunaan keseluruhan yang lebih tinggi selama bulan-bulan yang lebih hangat.
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    with tab2:
-        st.markdown("<h3 class='subsection-header'>Dampak Cuaca pada Penyewaan Sepeda</h3>", unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Weather situation impact
-            weather_data = filtered_data.groupby('weathersit_label')[['casual', 'registered', 'cnt']].mean().reset_index()
-            
-            # Terjemahkan kondisi cuaca jika ada di dalam data
-            weather_mapping = {
-                'Clear': 'Cerah',
-                'Cloudy': 'Berawan',
-                'Light Rain/Snow': 'Hujan/Salju Ringan',
-                'Heavy Rain/Snow': 'Hujan/Salju Lebat'
-            }
-            weather_data['weathersit_label'] = weather_data['weathersit_label'].map(lambda x: weather_mapping.get(x, x))
-            
-            fig_weather = px.bar(weather_data, x='weathersit_label', y=['casual', 'registered', 'cnt'],
-                               title='Rata-rata Penyewaan Sepeda Berdasarkan Kondisi Cuaca',
-                               labels={'value': 'Rata-rata Penyewaan', 'weathersit_label': 'Kondisi Cuaca', 'variable': 'Tipe Pengguna'},
-                               barmode='group',
-                               color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-            
-            fig_weather.update_layout(legend_title_text='Tipe Pengguna')
-            
-            st.plotly_chart(fig_weather, use_container_width=True)
-        
-        with col2:
-            # Season impact
-            season_data = filtered_data.groupby('season_label')[['casual', 'registered', 'cnt']].mean().reset_index()
-            season_order = ['Spring', 'Summer', 'Fall', 'Winter']
-            season_data['season_label'] = pd.Categorical(season_data['season_label'], categories=season_order, ordered=True)
-            season_data = season_data.sort_values('season_label')
-            
-            # Terjemahkan musim
-            season_mapping = {
-                'Spring': 'Musim Semi',
-                'Summer': 'Musim Panas',
-                'Fall': 'Musim Gugur',
-                'Winter': 'Musim Dingin'
-            }
-            season_data['season_label'] = season_data['season_label'].map(season_mapping)
-            
-            fig_season = px.bar(season_data, x='season_label', y=['casual', 'registered', 'cnt'],
-                              title='Rata-rata Penyewaan Sepeda Berdasarkan Musim',
-                              labels={'value': 'Rata-rata Penyewaan', 'season_label': 'Musim', 'variable': 'Tipe Pengguna'},
-                              barmode='group',
-                              color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-            
-            fig_season.update_layout(legend_title_text='Tipe Pengguna')
-            
-            st.plotly_chart(fig_season, use_container_width=True)
-        
-        # Temperature impact
-        temp_data = filtered_data.groupby('temp_category')[['casual', 'registered', 'cnt']].mean().reset_index()
-        temp_order = ['Cold', 'Mild', 'Warm', 'Hot']
-        temp_data['temp_category'] = pd.Categorical(temp_data['temp_category'], categories=temp_order, ordered=True)
-        temp_data = temp_data.sort_values('temp_category')
-        
-        # Terjemahkan kategori suhu
-        temp_mapping = {
-            'Cold': 'Dingin',
-            'Mild': 'Sejuk',
-            'Warm': 'Hangat',
-            'Hot': 'Panas'
-        }
-        temp_data['temp_category'] = temp_data['temp_category'].map(temp_mapping)
-        
-        fig_temp = px.line(temp_data, x='temp_category', y=['casual', 'registered', 'cnt'],
-                         title='Rata-rata Penyewaan Sepeda Berdasarkan Kategori Suhu',
-                         labels={'value': 'Rata-rata Penyewaan', 'temp_category': 'Kategori Suhu', 'variable': 'Tipe Pengguna'},
-                         markers=True,
-                         color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
-        
-        fig_temp.update_layout(legend_title_text='Tipe Pengguna')
-        
-        st.plotly_chart(fig_temp, use_container_width=True)
-        
-        # Scatter plot of temperature vs rentals
-        fig_temp_scatter = px.scatter(filtered_data, x='temp_actual', y='cnt', 
-                                    color='season_label',
-                                    size='hum_actual',
-                                    hover_data=['datetime', 'weathersit_label', 'windspeed_actual'],
-                                    title='Penyewaan Sepeda vs Suhu (warna berdasarkan musim, ukuran berdasarkan kelembaban)',
-                                    labels={'temp_actual': 'Suhu (°C)', 'cnt': 'Total Penyewaan', 'season_label': 'Musim', 'hum_actual': 'Kelembaban (%)'},
-                                    opacity=0.7)
-        
-        fig_temp_scatter.update_layout(legend_title_text='Musim')
-        
-        st.plotly_chart(fig_temp_scatter, use_container_width=True)
-        
-        st.markdown("<div class='insight-box'>", unsafe_allow_html=True)
-        st.markdown("""
-        **Wawasan Utama - Dampak Cuaca:**
-        - Kondisi cuaca cerah secara konsisten menunjukkan aktivitas penyewaan tertinggi.
-        - Kondisi cuaca ekstrem (hujan/salju lebat) secara signifikan mengurangi penyewaan sepeda.
-        - Suhu memiliki korelasi positif yang kuat dengan jumlah penyewaan hingga batas tertentu.
-        - Kelembaban tinggi dan angin kencang berdampak negatif pada penggunaan sepeda.
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    with tab3:
-        st.markdown("<h3 class='subsection-header'>Pola Perilaku Pengguna</h3>", unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Casual vs Registered distribution
-            user_dist = pd.DataFrame({
-                'Tipe Pengguna': ['Kasual', 'Terdaftar'],
-                'Jumlah': [filtered_data['casual'].sum(), filtered_data['registered'].sum()]
+            # Plot 2: Distribusi peminjaman berdasarkan musim
+            fig, ax = plt.subplots(figsize=(10, 6))
+            season_totals = day_df.groupby('season_label').agg({
+                'cnt': 'sum',
+                'casual': 'sum',
+                'registered': 'sum'
             })
-            
-            fig_user_dist = px.pie(user_dist, values='Jumlah', names='Tipe Pengguna',
-                                 title='Distribusi Pengguna Kasual vs Terdaftar',
-                                 color_discrete_sequence=['#FF9671', '#845EC2'])
-            
-            fig_user_dist.update_traces(textposition='inside', textinfo='percent+label')
-            
-            st.plotly_chart(fig_user_dist, use_container_width=True)
+            season_totals.plot(kind='bar', ax=ax)
+            plt.title('Total Peminjaman Berdasarkan Musim', fontsize=12)
+            plt.xlabel('Musim', fontsize=10)
+            plt.ylabel('Total Peminjaman', fontsize=10)
+            plt.xticks(rotation=45)
+            plt.legend(title='Tipe Pengguna')
+            plt.grid(True, alpha=0.3, axis='y')
+            plt.tight_layout()
+            st.pyplot(fig)
         
-        with col2:
-            # Working day vs non-working day
-            workday_data = filtered_data.groupby('workingday_label')[['casual', 'registered', 'cnt']].mean().reset_index()
+        with temporal_tabs[1]:  # Pola Mingguan
+            st.subheader("Pola Peminjaman Berdasarkan Hari dalam Seminggu")
             
-            # Terjemahkan jenis hari
-            workday_mapping = {
-                'Weekday': 'Hari Kerja',
-                'Weekend/Holiday': 'Akhir Pekan/Libur'
-            }
-            workday_data['workingday_label'] = workday_data['workingday_label'].map(lambda x: workday_mapping.get(x, x))
+            # Pola mingguan berdasarkan musim
+            fig, ax = plt.subplots(figsize=(10, 6))
+            weekly_seasonal_pattern = day_df.groupby(['season_label', 'weekday_label']).agg({
+                'cnt': 'mean',
+            }).reset_index()
             
-            fig_workday = px.bar(workday_data, x='workingday_label', y=['casual', 'registered', 'cnt'],
-                               title='Rata-rata Penyewaan Sepeda Berdasarkan Jenis Hari',
-                               labels={'value': 'Rata-rata Penyewaan', 'workingday_label': 'Jenis Hari', 'variable': 'Tipe Pengguna'},
-                               barmode='group',
-                               color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
+            weekly_seasonal_pivot = weekly_seasonal_pattern.pivot(index='weekday_label', columns='season_label', values='cnt')
             
-            fig_workday.update_layout(legend_title_text='Tipe Pengguna')
+            # Mengurutkan hari dalam seminggu dengan benar
+            day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            weekly_seasonal_pivot = weekly_seasonal_pivot.reindex(day_order)
             
-            st.plotly_chart(fig_workday, use_container_width=True)
-        
-        # Hourly patterns by user type and day type
-        hourly_workday = filtered_data.groupby(['hour_of_day', 'workingday_label'])[['casual', 'registered']].mean().reset_index()
-        
-        # Terjemahkan jenis hari
-        hourly_workday['workingday_label'] = hourly_workday['workingday_label'].map(lambda x: workday_mapping.get(x, x))
-        
-        fig_hourly_workday = px.line(hourly_workday, x='hour_of_day', y=['casual', 'registered'],
-                                   color='workingday_label',
-                                   facet_col='workingday_label',
-                                   title='Pola Penyewaan Per Jam Berdasarkan Tipe Pengguna dan Jenis Hari',
-                                   labels={'value': 'Rata-rata Penyewaan', 'hour_of_day': 'Jam', 'variable': 'Tipe Pengguna'},
-                                   color_discrete_map={'Hari Kerja': '#00C9A7', 'Akhir Pekan/Libur': '#F9F871'})
-        
-        fig_hourly_workday.update_layout(legend_title_text='Jenis Hari',
-                                       xaxis=dict(tickmode='linear', dtick=2),
-                                       xaxis2=dict(tickmode='linear', dtick=2))
-        
-        st.plotly_chart(fig_hourly_workday, use_container_width=True)
-        
-        # Rush hour analysis
-        rush_hour_data = filtered_data.groupby(['is_rush_hour_morning', 'is_rush_hour_evening'])[['casual', 'registered', 'cnt']].mean().reset_index()
-        rush_hour_data['Periode Waktu'] = 'Jam Biasa'
-        rush_hour_data.loc[rush_hour_data['is_rush_hour_morning'] == 1, 'Periode Waktu'] = 'Jam Sibuk Pagi (7-9 Pagi)'
-        rush_hour_data.loc[rush_hour_data['is_rush_hour_evening'] == 1, 'Periode Waktu'] = 'Jam Sibuk Sore (5-7 Sore)'
-        rush_hour_data = rush_hour_data[rush_hour_data['Periode Waktu'] != 'Jam Biasa']
-        
-        if not rush_hour_data.empty:
-            fig_rush = px.bar(rush_hour_data, x='Periode Waktu', y=['casual', 'registered', 'cnt'],
-                            title='Rata-rata Penyewaan Sepeda Selama Jam Sibuk',
-                            labels={'value': 'Rata-rata Penyewaan', 'Periode Waktu': 'Periode Waktu', 'variable': 'Tipe Pengguna'},
-                            barmode='group',
-                            color_discrete_map={'casual': '#FF9671', 'registered': '#845EC2', 'cnt': '#00C9A7'})
+            weekly_seasonal_pivot.plot(kind='bar', ax=ax)
+            plt.title('Rata-rata Peminjaman Sepeda per Hari Berdasarkan Musim', fontsize=12)
+            plt.xlabel('Hari dalam Seminggu', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+            plt.xticks(rotation=45)
+            plt.grid(True, alpha=0.3, axis='y')
+            plt.legend(title='Musim')
+            plt.tight_layout()
+            st.pyplot(fig)
             
-            fig_rush.update_layout(legend_title_text='Tipe Pengguna')
-            
-            st.plotly_chart(fig_rush, use_container_width=True)
+            # Pola jam berdasarkan tipe hari (hari kerja vs akhir pekan)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            workday_hourly = hour_df.groupby(['workingday', 'hr']).agg({
+                'cnt': 'mean'
+            }).reset_index()
+            workday_hourly_pivot = workday_hourly.pivot(index='hr', columns='workingday', values='cnt')
+            workday_hourly_pivot.columns = ['Weekend/Holiday', 'Working Day']
+            workday_hourly_pivot.plot(kind='line', ax=ax)
+            plt.title('Pola Peminjaman per Jam: Hari Kerja vs Akhir Pekan', fontsize=12)
+            plt.xlabel('Jam', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+            plt.xticks(range(0, 24))
+            plt.grid(True, alpha=0.3)
+            plt.legend(title='Tipe Hari')
+            plt.tight_layout()
+            st.pyplot(fig)
         
-        st.markdown("<div class='insight-box'>", unsafe_allow_html=True)
-        st.markdown("""
-        **Wawasan Utama - Pola Pengguna:**
-        - Pengguna terdaftar mendominasi penggunaan hari kerja, terutama selama jam kerja.
-        - Pengguna kasual lebih aktif pada akhir pekan dan hari libur.
-        - Jam sibuk pagi dan sore menunjukkan pola yang berbeda untuk pengguna kasual vs. pengguna terdaftar.
-        - Pengguna terdaftar menunjukkan pola penggunaan yang lebih konsisten terlepas dari kondisi cuaca.
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with temporal_tabs[2]:  # Pola Tahunan
+            st.subheader("Analisis Pertumbuhan dan Tren Tahunan")
+            
+            # Perbandingan peminjaman antara 2011 dan 2012
+            fig, ax = plt.subplots(figsize=(10, 6))
+            yearly_comparison = day_df.groupby('yr_label').agg({
+                'cnt': 'mean',
+                'casual': 'mean',
+                'registered': 'mean'
+            })
+            yearly_comparison.plot(kind='bar', ax=ax)
+            plt.title('Rata-rata Peminjaman Harian: 2011 vs 2012', fontsize=12)
+            plt.xlabel('Tahun', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+            plt.grid(True, alpha=0.3, axis='y')
+            plt.legend(title='Tipe Pengguna')
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Tren bulanan per tahun
+            fig, ax = plt.subplots(figsize=(10, 6))
+            monthly_yearly_trend = day_df.groupby(['yr_label', 'month_name']).agg({
+                'cnt': 'mean'
+            }).reset_index()
+            monthly_yearly_pivot = monthly_yearly_trend.pivot(index='month_name', columns='yr_label', values='cnt')
+            
+            # Mengurutkan bulan secara kronologis
+            month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+            monthly_yearly_pivot = monthly_yearly_pivot.reindex(month_order)
+            monthly_yearly_pivot.plot(kind='line', marker='o', ax=ax)
+            plt.title('Tren Peminjaman Bulanan: 2011 vs 2012', fontsize=12)
+            plt.xlabel('Bulan', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman Harian', fontsize=10)
+            plt.xticks(rotation=45)
+            plt.grid(True, alpha=0.3)
+            plt.legend(title='Tahun')
+            plt.tight_layout()
+            st.pyplot(fig)
     
-    with tab4:
-        st.markdown("<h3 class='subsection-header'>Analisis Korelasi</h3>", unsafe_allow_html=True)
+    else:  # Pengaruh Cuaca
+        st.header("Analisis Pengaruh Cuaca Terhadap Peminjaman Sepeda")
         
-        # Correlation heatmap
-        corr_columns = ['temp_actual', 'atemp_actual', 'hum_actual', 'windspeed_actual', 
-                        'casual', 'registered', 'cnt', 'hour_of_day', 'is_weekend']
+        # Tampilkan subtab untuk berbagai visualisasi pengaruh cuaca
+        weather_tabs = st.tabs(["Kondisi Cuaca", "Faktor Cuaca", "Interaksi Cuaca"])
         
-        # Check if columns exist in the dataset
-        valid_corr_columns = [col for col in corr_columns if col in filtered_data.columns]
-        
-        if len(valid_corr_columns) > 1:  # Need at least 2 columns for correlation
-            corr_data = filtered_data[valid_corr_columns].corr()
+        with weather_tabs[0]:  # Kondisi Cuaca
+            st.subheader("Peminjaman Berdasarkan Kondisi Cuaca")
             
-            fig_corr = px.imshow(corr_data,
-                               labels=dict(x="Fitur", y="Fitur", color="Korelasi"),
-                               x=corr_data.columns,
-                               y=corr_data.columns,
-                               color_continuous_scale='RdBu_r',
-                               title='Peta Panas Korelasi Fitur Utama')
+            # Peminjaman berdasarkan kondisi cuaca
+            fig, ax = plt.subplots(figsize=(10, 6))
+            weather_totals = day_df.groupby('weathersit_label').agg({
+                'cnt': 'mean',
+                'casual': 'mean',
+                'registered': 'mean'
+            })
+            weather_totals.plot(kind='bar', ax=ax)
+            plt.title('Rata-rata Peminjaman Berdasarkan Kondisi Cuaca', fontsize=12)
+            plt.xlabel('Kondisi Cuaca', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+            plt.xticks(rotation=45)
+            plt.grid(True, alpha=0.3, axis='y')
+            plt.legend(title='Tipe Pengguna')
+            plt.tight_layout()
+            st.pyplot(fig)
             
-            fig_corr.update_layout(height=600)
+            # Pola peminjaman per jam berdasarkan kondisi cuaca
+            weather_impact = hour_df.groupby(['weathersit_label', 'hr']).agg({
+                'cnt': 'mean',
+            }).reset_index()
             
-            st.plotly_chart(fig_corr, use_container_width=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Temperature vs rentals scatter
-            fig_temp_scatter = px.scatter(filtered_data, x='temp_actual', y='cnt',
-                                       title='Suhu vs Total Penyewaan',
-                                       labels={'temp_actual': 'Suhu (°C)', 'cnt': 'Total Penyewaan'},
-                                       trendline='ols',
-                                       color_discrete_sequence=['#00C9A7'])
+            weather_hour_pivot = weather_impact.pivot(index='hr', columns='weathersit_label', values='cnt')
             
-            st.plotly_chart(fig_temp_scatter, use_container_width=True)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.lineplot(data=weather_hour_pivot, ax=ax)
+            plt.title('Pola Peminjaman per Jam Berdasarkan Kondisi Cuaca', fontsize=12)
+            plt.xlabel('Jam', fontsize=10)
+            plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+            plt.xticks(range(0, 24))
+            plt.grid(True, alpha=0.3)
+            plt.legend(title='Kondisi Cuaca')
+            plt.tight_layout()
+            st.pyplot(fig)
         
-        with col2:
-            # Humidity vs rentals scatter
-            fig_hum_scatter = px.scatter(filtered_data, x='hum_actual', y='cnt',
-                                      title='Kelembaban vs Total Penyewaan',
-                                      labels={'hum_actual': 'Kelembaban (%)', 'cnt': 'Total Penyewaan'},
-                                      trendline='ols',
-                                      color_discrete_sequence=['#FF9671'])
+        with weather_tabs[1]:  # Faktor Cuaca
+            st.subheader("Pengaruh Faktor Cuaca (Suhu, Kelembaban, Angin)")
             
-            st.plotly_chart(fig_hum_scatter, use_container_width=True)
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Peminjaman berdasarkan kategori suhu
+                temp_impact = hour_df.groupby('temp_category').agg({
+                    'cnt': 'mean',
+                    'casual': 'mean',
+                    'registered': 'mean'
+                })
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                temp_impact.plot(kind='bar', ax=ax)
+                plt.title('Rata-rata Peminjaman Berdasarkan Kategori Suhu', fontsize=12)
+                plt.xlabel('Kategori Suhu', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Tipe Pengguna')
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Peminjaman berdasarkan kategori kelembaban
+                humidity_impact = hour_df.groupby('hum_category').agg({
+                    'cnt': 'mean',
+                    'casual': 'mean',
+                    'registered': 'mean'
+                })
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                humidity_impact.plot(kind='bar', ax=ax)
+                plt.title('Rata-rata Peminjaman Berdasarkan Kategori Kelembaban', fontsize=12)
+                plt.xlabel('Kategori Kelembaban', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Tipe Pengguna')
+                plt.tight_layout()
+                st.pyplot(fig)
+            
+            with col2:
+                # Peminjaman berdasarkan kategori kecepatan angin
+                wind_impact = hour_df.groupby('windspeed_category').agg({
+                    'cnt': 'mean',
+                    'casual': 'mean',
+                    'registered': 'mean'
+                })
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                wind_impact.plot(kind='bar', ax=ax)
+                plt.title('Rata-rata Peminjaman Berdasarkan Kategori Kecepatan Angin', fontsize=12)
+                plt.xlabel('Kategori Kecepatan Angin', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Tipe Pengguna')
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Peminjaman berdasarkan indeks kenyamanan
+                comfort_analysis = hour_df.groupby('comfort_category').agg({
+                    'cnt': 'mean',
+                    'casual': 'mean',
+                    'registered': 'mean'
+                })
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                comfort_analysis.plot(kind='bar', ax=ax)
+                plt.title('Peminjaman Berdasarkan Indeks Kenyamanan', fontsize=12)
+                plt.xlabel('Kategori Kenyamanan', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Tipe Pengguna')
+                plt.tight_layout()
+                st.pyplot(fig)
         
-        # Feature importance analysis (simulated)
-        # Feature importance analysis (simulated)
-        feature_imp = pd.DataFrame({
-            'Fitur': ['Suhu', 'Jam', 'Hari Kerja', 'Musim', 'Kelembaban', 'Kecepatan Angin', 'Kondisi Cuaca'],
-            'Importance': [0.35, 0.25, 0.15, 0.12, 0.08, 0.03, 0.02]
-        })
-        
-        fig_feature_imp = px.bar(feature_imp, x='Importance', y='Fitur', 
-                              title='Tingkat Kepentingan Fitur untuk Penyewaan Sepeda (Berdasarkan Korelasi)',
-                              labels={'Importance': 'Kepentingan Relatif', 'Fitur': 'Fitur'},
-                              orientation='h',
-                              color='Importance',
-                              color_continuous_scale='Viridis')
-        
-        fig_feature_imp.update_layout(yaxis={'categoryorder': 'total ascending'})
-        
-        st.plotly_chart(fig_feature_imp, use_container_width=True)
-        
-        st.markdown("<div class='insight-box'>", unsafe_allow_html=True)
-        st.markdown("""
-        **Wawasan Utama - Korelasi:**
-        - Suhu menunjukkan korelasi positif terkuat dengan penyewaan sepeda.
-        - Kelembaban memiliki korelasi negatif moderat dengan penggunaan.
-        - Jam adalah faktor kritis, terutama untuk pengguna terdaftar.
-        - Kecepatan angin memiliki dampak negatif kecil pada jumlah penyewaan.
-        - Kondisi cuaca berdampak lebih signifikan pada pengguna kasual dibandingkan pengguna terdaftar.
-        """)
-        st.markdown("</div>", unsafe_allow_html=True)
-    
-    # Conclusions and Recommendations
-    st.markdown("<h2 class='section-header'>Kesimpulan & Rekomendasi</h2>", unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("<h3 class='subsection-header'>Temuan Utama</h3>", unsafe_allow_html=True)
-        st.markdown("""
-        - **Pola Temporal**: Penyewaan sepeda menunjukkan pola jam, harian, dan musiman yang jelas, dengan puncak selama jam kerja di hari kerja dan siang hari di akhir pekan.
-        
-        - **Dampak Cuaca**: Kondisi cuaca secara signifikan mempengaruhi penyewaan sepeda, dengan suhu sebagai prediktor terkuat. Cuaca cerah dan suhu sedang menghasilkan penggunaan yang lebih tinggi.
-        
-        - **Perilaku Pengguna**: Pengguna terdaftar terutama menggunakan sepeda untuk bekerja, sementara pengguna kasual lebih aktif selama akhir pekan dan hari libur.
-        
-        - **Faktor Kritis**: Suhu, jam dalam sehari, dan jenis hari (kerja/non-kerja) adalah faktor terpenting yang mempengaruhi pola penyewaan sepeda.
-        """)
-    
-    with col2:
-        st.markdown("<h3 class='subsection-header'>Rekomendasi</h3>", unsafe_allow_html=True)
-        st.markdown("""
-        - **Alokasi Sumber Daya**: Optimalkan distribusi sepeda berdasarkan pola waktu, pastikan lebih banyak sepeda tersedia selama jam sibuk.
-        
-        - **Strategi Pemasaran**: Targetkan pengguna kasual selama akhir pekan dan hari libur, sambil mempromosikan manfaat berlangganan untuk mengkonversi mereka menjadi pengguna terdaftar.
-        
-        - **Adaptasi Cuaca**: Terapkan strategi harga berbasis cuaca dan promosi selama kondisi cuaca yang menguntungkan.
-        
-        - **Perencanaan Pemeliharaan**: Jadwalkan pemeliharaan selama jam dan musim sepi untuk meminimalkan gangguan layanan.
-        
-        - **Perencanaan Ekspansi**: Pertimbangkan pola musiman saat merencanakan ekspansi sistem atau penambahan stasiun.
-        """)
-    
-    # Footer
-    st.markdown("---")
-    st.markdown("Dashboard Penyewaan Sepeda | Dibuat dengan Streamlit")
+        with weather_tabs[2]:  # Interaksi Cuaca
+            st.subheader("Interaksi antara Cuaca, Musim, dan Tipe Hari")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Pengaruh cuaca pada berbagai musim
+                season_weather_interaction = day_df.groupby(['season_label', 'weathersit_label']).agg({
+                    'cnt': 'mean'
+                }).reset_index()
+                season_weather_pivot = season_weather_interaction.pivot(index='season_label', columns='weathersit_label', values='cnt')
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                season_weather_pivot.plot(kind='bar', ax=ax)
+                plt.title('Pengaruh Cuaca pada Berbagai Musim', fontsize=12)
+                plt.xlabel('Musim', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=45)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Kondisi Cuaca')
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Interaksi antara suhu dan kelembaban
+                temp_hum_interaction = hour_df.groupby(['temp_category', 'hum_category']).agg({
+                    'cnt': 'mean'
+                }).reset_index()
+                temp_hum_pivot = temp_hum_interaction.pivot(index='temp_category', columns='hum_category', values='cnt')
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.heatmap(temp_hum_pivot, cmap='YlOrRd', annot=True, fmt='.0f', cbar_kws={'label': 'Rata-rata Peminjaman'}, ax=ax)
+                plt.title('Interaksi Suhu dan Kelembaban Terhadap Peminjaman', fontsize=12)
+                plt.xlabel('Kategori Kelembaban', fontsize=10)
+                plt.ylabel('Kategori Suhu', fontsize=10)
+                plt.tight_layout()
+                st.pyplot(fig)
+            
+            with col2:
+                # Pengaruh cuaca pada hari kerja vs akhir pekan
+                workday_weather_interaction = day_df.groupby(['workingday_label', 'weathersit_label']).agg({
+                    'cnt': 'mean'
+                }).reset_index()
+                workday_weather_pivot = workday_weather_interaction.pivot(index='workingday_label', columns='weathersit_label', values='cnt')
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                workday_weather_pivot.plot(kind='bar', ax=ax)
+                plt.title('Pengaruh Cuaca pada Hari Kerja vs Akhir Pekan', fontsize=12)
+                plt.xlabel('Tipe Hari', fontsize=10)
+                plt.ylabel('Rata-rata Peminjaman', fontsize=10)
+                plt.xticks(rotation=0)
+                plt.grid(True, alpha=0.3, axis='y')
+                plt.legend(title='Kondisi Cuaca')
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Korelasi antara variabel cuaca dan peminjaman
+                weather_corr = hour_df[['temp_actual', 'atemp_actual', 'hum_actual', 'windspeed_actual', 'cnt', 'casual', 'registered']].corr()
+                mask = np.triu(np.ones_like(weather_corr, dtype=bool))
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.heatmap(weather_corr, mask=mask, cmap='coolwarm', annot=True, fmt='.2f', cbar_kws={'label': 'Korelasi'}, ax=ax)
+                plt.title('Korelasi antara Variabel Cuaca dan Peminjaman', fontsize=12)
+                plt.tight_layout()
+                st.pyplot(fig)
 
 except Exception as e:
-    st.error(f"Terjadi kesalahan: {e}")
+    st.error(f"Terjadi kesalahan saat memuat atau memproses data: {e}")
     
-    # Display helpful information for debugging
-    st.error("Informasi Debug:")
+    # Tampilkan pesan panduan jika terjadi kesalahan
+    st.info("""
+    Untuk menjalankan aplikasi ini, Anda memerlukan file data 'hour.csv' dan 'day.csv' 
+    dari dataset Bike Sharing. Pastikan file-file tersebut tersedia di direktori yang sama 
+    dengan aplikasi ini atau sesuaikan path pada fungsi `load_data()`.
     
-    # Offer solution for statsmodels error
-    if "statsmodels" in str(e):
-        st.error("Package 'statsmodels' tidak ditemukan. Jalankan perintah berikut di Command Prompt atau Terminal:")
-        st.code("pip install statsmodels")
-    
-    # Offer solution for file not found error
-    if "No such file or directory" in str(e):
-        st.error("File 'main_data.csv' tidak ditemukan. Pastikan file ada di lokasi yang benar atau upload file secara manual.")
-        uploaded_file = st.file_uploader("Upload main_data.csv", type=["csv"])
-        
-        if uploaded_file is not None:
-            try:
-                data = pd.read_csv(uploaded_file)
-                data['datetime'] = pd.to_datetime(data['datetime'])
-                st.success("File berhasil diupload! Silakan refresh halaman untuk melihat dashboard.")
-            except Exception as upload_error:
-                st.error(f"Error saat memproses file yang diupload: {upload_error}")
-                st.info("Pastikan file CSV yang diupload memiliki format yang sesuai dengan yang diharapkan.")
+    Dataset dapat diunduh dari: https://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
+    """)
