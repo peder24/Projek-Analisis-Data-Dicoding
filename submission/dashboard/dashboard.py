@@ -14,8 +14,8 @@ st.title("Analisis Peminjaman Sepeda")
 # Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    hour_df = pd.read_csv("./submission/dashboard/hour.csv")  # Ganti dengan path file Anda
-    day_df = pd.read_csv("./submission/dashboard/day.csv")  # Ganti dengan path file Anda
+    hour_df = pd.read_csv("hour.csv")  # Ganti dengan path file Anda
+    day_df = pd.read_csv("day.csv")  # Ganti dengan path file Anda
     
     # Tambahkan label-label kategori
     hour_df['season_label'] = hour_df['season'].map({1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'})
