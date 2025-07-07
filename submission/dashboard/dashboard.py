@@ -14,8 +14,29 @@ st.title("Analisis Peminjaman Sepeda")
 # Fungsi untuk memuat data
 @st.cache_data
 def load_data():
-    hour_df = pd.read_csv("hour.csv")  # Ganti dengan path file Anda
-    day_df = pd.read_csv("day.csv")  # Ganti dengan path file Anda
+    # Daftar kemungkinan lokasi file
+    possible_paths = [
+        ("hour.csv", "day.csv"),  # Folder yang sama dengan dashboard.py
+        ("submission/dashboard/hour.csv", "submission/dashboard/day.csv"),  # Dari root
+        ("dashboard/hour.csv", "dashboard/day.csv"),  # Dari submission
+        ("./hour.csv", "./day.csv"),  # Current directory
+    ]
+    
+    hour_df = None
+    day_df = None
+    
+    for hour_path, day_path in possible_paths:
+        try:
+            hour_df = pd.read_csv(hour_path)
+            day_df = pd.read_csv(day_path)
+            st.success(f"Data berhasil dimuat dari: {hour_path}")
+            break
+        except FileNotFoundError:
+            continue
+    
+    if hour_df is None or day_df is None:
+        st.error("File CSV tidak ditemukan di lokasi manapun!")
+        st.stop()
     
     # Tambahkan label-label kategori
     hour_df['season_label'] = hour_df['season'].map({1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'})
